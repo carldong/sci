@@ -17,6 +17,12 @@ SLOT="0"
 IUSE="dynamic int64 openmp static-libs threads"
 KEYWORDS=""
 
+RDEPEND="
+	>=virtual/blas-2.1-r2[int64?]
+	>=virtual/cblas-2.0-r1[int64?]"
+DEPEND="${RDEPEND}
+	virtual/pkgconfig"
+
 INT64_SUFFIX="int64"
 BASE_PROFNAME="openblas"
 
@@ -58,6 +64,22 @@ get_profname() {
 		profname+="-openmp"
 	fi
 	echo "${profname}"
+}
+
+get_blas_module() {
+	local module_name="blas"
+	if [[ "${MULTIBUILD_ID}" =~ "_${INT64_SUFFIX}" ]]; then
+		module_name+="-${INT64_SUFFIX}"
+	fi
+	echo "${module_name}"
+}
+
+get_cblas_module() {
+	local module_name="cblas"
+	if [[ "${MULTIBUILD_ID}" =~ "_${INT64_SUFFIX}" ]]; then
+		module_name+="-${INT64_SUFFIX}"
+	fi
+	echo "${module_name}"
 }
 
 get_libname() {
@@ -204,10 +226,10 @@ src_install() {
 				OPENBLAS_INCLUDE_DIR="${ED}"usr/include/${PN} \
 				OPENBLAS_LIBRARY_DIR="${ED}"usr/$(get_libdir)
 			use static-libs || rm "${ED}"usr/$(get_libdir)/lib*.a
-			alternatives_for blas ${profname} 0 \
-				/usr/$(get_libdir)/pkgconfig/blas.pc ${pcfile}
-			alternatives_for cblas ${profname} 0 \
-				/usr/$(get_libdir)/pkgconfig/cblas.pc ${pcfile} \
+			alternatives_for $(get_blas_module) ${profname} 0 \
+				/usr/$(get_libdir)/pkgconfig/$(get_blas_module).pc ${pcfile}
+			alternatives_for $(get_cblas_module) ${profname} 0 \
+				/usr/$(get_libdir)/pkgconfig/$(get_cblas_module).pc ${pcfile} \
 				/usr/include/cblas.h ${PN}/cblas.h
 			insinto /usr/$(get_libdir)/pkgconfig
 			doins ${pcfile}
