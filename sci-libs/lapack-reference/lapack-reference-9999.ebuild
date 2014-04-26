@@ -31,7 +31,8 @@ SLOT="0"
 IUSE="int64 static-libs test xblas"
 
 RDEPEND="
-	virtual/blas
+	>=virtual/blas-2.1-r1[int64?]
+	>=virtual/lapack-3.5-r2[int64?]
 	xblas? ( sci-libs/xblas )"
 DEPEND="${RDEPEND}
 	virtual/pkgconfig"
@@ -56,15 +57,31 @@ get_variant_suffix() {
 	echo "${variant_suffix}"
 }
 
+get_blas_module() {
+	local module_name="blas"
+	if [[ "${MULTIBUILD_ID}" =~ "_${INT64_SUFFIX}" ]]; then
+		module_name+="-${INT64_SUFFIX}"
+	fi
+	echo "${module_name}"
+}
+
 get_blas_profname() {
 	local profname="${1:-$(get_profname)}"
 	local variant_suffix=$(get_variant_suffix "${profname}")
-	local blas_profile=$(eselect blas show)
+	local blas_profile=$(eselect $(get_blas_module) show)
 	local selected_blas_profile="${blas_profile}"
 	local blas_no_int64="${selected_blas_profile/-int64/}"
 	local blas_base="${blas_no_int64%-*}"
 	local blas_name="${blas_no_int64/${blas_base}/${blas_base}${variant_suffix}}"
 	echo "${blas_name}"
+}
+
+get_lapack_module() {
+	local module_name="lapack"
+	if [[ "${MULTIBUILD_ID}" =~ "_${INT64_SUFFIX}" ]]; then
+		module_name+="-${INT64_SUFFIX}"
+	fi
+	echo "${module_name}"
 }
 
 int64_multilib_get_enabled_abis() {
@@ -194,8 +211,8 @@ src_install() {
 		cmake-utils_src_install
 		if [[ ! "${MULTIBUILD_ID}" =~ "_${STATIC_SUFFIX}" ]]; then
 			local profname=$(get_profname)
-			alternatives_for lapack $(get_profname "reference") 0 \
-				/usr/$(get_libdir)/pkgconfig/lapack.pc ${profname}.pc
+			alternatives_for $(get_lapack_module) $(get_profname "reference") 0 \
+				/usr/$(get_libdir)/pkgconfig/$(get_lapack_module).pc ${profname}.pc
 		fi
 	}
 	multibuild_foreach_variant _int64_multilib_multibuild_wrapper my_src_install
